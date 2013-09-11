@@ -230,8 +230,7 @@ define(function (require, exports, module) {
             });
             d3.select("#prefix").on("keyup", function () {
                 updateRegex();
-            });
-            
+            });           
             if (widget.type() === "Button") {
                 updateBoundFunctionsLabel();
             } else {

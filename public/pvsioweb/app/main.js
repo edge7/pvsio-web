@@ -50,7 +50,8 @@ define(function (require, exports, module) {
 				//update the regex for this mark if its a display widget and give it a display class
 				if (e.widget.type() === "Display") {
 					e.mark.classed("display",  true);
-					displayMappings.active[e.widget.id()] = {regex: e.widget.regex(), uiElement: e.widget.id()};
+					//NEW: Display type
+					displayMappings.active[e.widget.id()] = {regex: e.widget.regex(), uiElement: e.widget.id(), d_type: e.widget.d_type()};
 				}
 			}).addListener(widgetEvents.WidgetDeleted, function (e) {
 				if (e.widget.type() === "Display") {
