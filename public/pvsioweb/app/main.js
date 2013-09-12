@@ -5,6 +5,7 @@
  */
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50, es5: true */
 /*global define, d3, require, $, brackets, _, window, MouseEvent, FormData, document, setTimeout, clearInterval */
+var gauge;
 define(function (require, exports, module) {
     "use strict";
     
@@ -24,8 +25,10 @@ define(function (require, exports, module) {
         openProjectForm         = require("pvsioweb/forms/openProject"),
         saveProjectAs           = require("pvsioweb/forms/saveProjectAs"),
         WebPageFileReader       = require("util/WebPageFileReader");
+	var gauge_ext               = require("../lib/gauge/gauge");
     
     var currentProject = {}, sourceCodeChanged = false, ws;
+
 	var tempImageName, tempSpecName, specFileName, specNameRegex = /(\w+)\s*:\s*THEORY\s+BEGIN/i;
 	var editor = ace.edit("editor");
 	editor.getSession().setMode('ace/mode/text');
@@ -50,8 +53,39 @@ define(function (require, exports, module) {
 				//update the regex for this mark if its a display widget and give it a display class
 				if (e.widget.type() === "Display") {
 					e.mark.classed("display",  true);
+
 					//NEW: Display type
-					displayMappings.active[e.widget.id()] = {regex: e.widget.regex(), uiElement: e.widget.id(), d_type: e.widget.d_type()};
+					displayMappings.active[e.widget.id()] = {regex: e.widget.regex(), uiElement: e.widget.id(),
+										 d_type: e.widget.d_type()};
+
+					if (e.formData[2].value == "Tachometer")  {
+
+						var width_parent  = document.getElementById(e.mark[0][0].id).offsetWidth;
+						
+						var height_parent = document.getElementById(e.mark[0][0].id).offsetHeight;
+						/* Creating new element canvas a new html5 element       */ 
+						var canvas = document.createElement("canvas");
+						canvas.id = 'tachometer';
+    						/* e.mark[0][0].id is the div element having focus       */
+      						document.getElementById(e.mark[0][0].id).appendChild(canvas);
+						/* Creating new Gauge element, see gauge.js for details  */
+						gauge = new Gauge({
+						renderTo : 'tachometer',
+						width : width_parent +20,
+						height : height_parent +30,
+						glow : true,
+						units : 'ml/h',
+						minValue : 0,
+						maxValue : 400,
+						majorTicks : ['0','20','40','60','80','100','120','140',
+						'160','180','200','220','240','260', '300', '340','360','400'],
+						minorTicks : 3,
+						});
+						gauge.draw();
+						gauge.setValue(0);
+						
+					} //End tachometer
+					
 				}
 			}).addListener(widgetEvents.WidgetDeleted, function (e) {
 				if (e.widget.type() === "Display") {

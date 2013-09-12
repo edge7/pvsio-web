@@ -137,7 +137,6 @@ function alarisGP_disp_type(regexMatch)  {
 	arraySplit = valueAsString.split(".");
 	firstString = arraySplit[0];
 
-	//XXX Warning: <u> is deprecated! Use CSS instead
 	if( check == true)
 		arraySplit[1] = "<span style='text-decoration:underline'>" + arraySplit[1].fontsize(4) + "</span>";
 	else 
@@ -170,22 +169,35 @@ function alarisGH_disp_type(regexMatch)  {
 
 
 }
+function tachometer_disp_type(regexMatch)  {
+
+	gauge.setValue(regexMatch);
+
+}
 
 //NEW Display type
 function set_display_style(display_type, regexMatch, stateString) {
 
 	switch (display_type)  {
 	
-	case "Bbraun" :
+	case "Bbraun"     :
+
 		return bbraun_disp_type(regexMatch, stateString );
 		break;
 	
-	case "AlarisGP" :
+	case "AlarisGP"   :
+
 		return alarisGP_disp_type(regexMatch);
 		break;
-	case "AlarisGH" :
+	case "AlarisGH"   :
+
 		return alarisGH_disp_type(regexMatch);
 	        break;
+	case "Tachometer" :
+		
+		tachometer_disp_type(regexMatch);
+
+		break;
 
 	default : //That is: do nothing
 		return regexMatch;
@@ -203,9 +215,11 @@ define(['./displayMappings', 'd3/d3'], function (mappings) {
 	o.updateDisplay = function (stateString) {
 		var map = mappings.active;
 		if (stateString) {
+
 			var key, regex, regexMatch, uiElement,display_type, stringToUse;
             _.each(map, function (value, key) {
                 //get the value of the display field in the output
+
 				regex = new RegExp(value.regex);
 				regexMatch = regex.exec(stateString);
 				if (regexMatch && regexMatch.length > 1) {
@@ -217,10 +231,10 @@ define(['./displayMappings', 'd3/d3'], function (mappings) {
 					else
 					    display_type = "Classic";
 
-					stringToUse = set_display_style(display_type, regexMatch, stateString );
-
 					//update the display ui element with the value
-					uiElement = value.uiElement;
+					uiElement = display_type =="Tachometer" ? undefined :value.uiElement;	
+					stringToUse = set_display_style(display_type, regexMatch, stateString);
+
 					if (uiElement) {
 						d3.select("#" + uiElement).html("")
 							.append("span").attr("class", "displayvalue").html(stringToUse);

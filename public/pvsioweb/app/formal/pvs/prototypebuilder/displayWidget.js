@@ -12,10 +12,11 @@ define(['./baseWidget', './widgetType', 'util/property', './displayMappings','./
                            {value: widgetType.Display, label: widgetType.Display}];
 
 	// NEW: Display_types
-        var displayTypes = [{ value: displayType.Classic,  label: displayType.Classic  } ,
-			    { value: displayType.Bbraun,   label: displayType.Bbraun   } ,
-			    { value: displayType.AlarisGP, label: displayType.AlarisGP } ,
-			    { value: displayType.AlarisGH, label: displayType.AlarisGH }
+        var displayTypes = [{ value: displayType.Classic   ,  label: displayType.Classic   } ,
+			    { value: displayType.Bbraun    ,  label: displayType.Bbraun    } ,
+			    { value: displayType.AlarisGP  ,  label: displayType.AlarisGP  } ,
+			    { value: displayType.AlarisGH  ,  label: displayType.AlarisGH  } ,
+			    { value: displayType.tachometer,  label: displayType.tachometer}
 			   ] ;
 	
     
