@@ -39,7 +39,32 @@ define(function (require, exports, module) {
 			d3.select("#txtSpecFileName").property("value", specFileName);
 		}
 	});
-    
+    function create_canvas(e)  {
+
+	var canvas,context ="";
+	
+	if( (canvas = document.getElementById("canvas")) == null )  {
+	
+		var div = e.mark[0][0].id;
+		canvas = document.createElement("canvas");
+	        div = document.getElementById(div); 
+	        canvas.width = div.offsetWidth;
+   	        canvas.height = div.offsetHeight;
+	        canvas.id = "canvas";
+		context = canvas.getContext("2d");
+		context.beginPath();
+      		context.rect(0, 0, 15, 15);
+      		context.fillStyle = 'green';
+      		context.fill();
+      		context.lineWidth = 2;
+      		context.stroke();
+		e.mark[0][0].appendChild(canvas); 
+		
+	
+	}
+
+    }
+
     function handleWidgetEdit(mark) {
 		widgetEditor.create(mark)
 			.addListener(widgetEvents.WidgetSaved,  function (e) {
@@ -50,7 +75,14 @@ define(function (require, exports, module) {
 				//update the regex for this mark if its a display widget and give it a display class
 				if (e.widget.type() === "Display") {
 					e.mark.classed("display",  true);
-					displayMappings.active[e.widget.id()] = {regex: e.widget.regex(), uiElement: e.widget.id()};
+					displayMappings.active[e.widget.id()] = { regex: e.widget.regex(), uiElement: e.widget.id(),
+										  d_type: e.widget.d_type()
+										};
+					if (e.formData[2].value == "TCAS")  {
+				
+						create_canvas(e);
+					
+					}
 				}
 			}).addListener(widgetEvents.WidgetDeleted, function (e) {
 				if (e.widget.type() === "Display") {
