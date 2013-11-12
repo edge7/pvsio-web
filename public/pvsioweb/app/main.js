@@ -19,14 +19,14 @@ define(function (require, exports, module) {
         d3                      = require("d3/d3"),
         queue                   = require("d3/queue"),
         imageMapper             = require("imagemapper"),
-		NewWidgetView			= require("pvsioweb/forms/newWidget"),
-		EditWidgetView			= require("pvsioweb/forms/editWidget"),
-		WidgetManager			= require("pvsioweb/WidgetManager")(),
-		uidGenerator			= require("util/uuidGenerator"),
-		stateMachine            = require("../lib/statemachine/stateMachine"),
+	NewWidgetView		= require("pvsioweb/forms/newWidget"),
+	EditWidgetView		= require("pvsioweb/forms/editWidget"),
+	WidgetManager		= require("pvsioweb/WidgetManager")(),
+	uidGenerator		= require("util/uuidGenerator"),
+	stateMachine            = require("../lib/statemachine/stateMachine"),
         handlerFile             = require("../lib/fileHandler/fileHandler"),
         pvsWriter               = require("../lib/statemachine/stateToPvsSpecificationWriter"),
-		pvsLanguage				= require("../lib/statemachine/pvsLanguage");
+	pvsLanguage		= require("../lib/statemachine/pvsLanguage");
 
 
     var currentProject = new Project(""), ws, pvsFilesListBox, fileContents = {};
@@ -665,9 +665,7 @@ define(function (require, exports, module) {
             ws.send({type: "setMainFile", projectName: currentProject.name(), fileName: pvsFile.name()}, function (err, res) {
                 //if there was no error update the main file else alert user
                 currentProject.mainPVSFile(pvsFile);
-                pvsFilesListBox.updateView();
-		///FIXME 
-		
+                pvsFilesListBox.updateView();		
             });
         }
     });
@@ -701,45 +699,14 @@ define(function (require, exports, module) {
     d3.select("#button_state").on("click", function () { stateMachine.add_node_mode(); });
     d3.select("#button_transition").on("click", function () { stateMachine.add_transition_mode(); });
     d3.select("#button_self_transition").on("click", function () { stateMachine.add_self_transition_mode(); });
-   	var modifiedUser = 0;
-    var myState = new Array();
-    myState[0] = { 
-			name : "S1",
-                        id   : 0
 
-	};
-    myState[1] = {
-		        name : "S2",
-	                id   : 0
-	};
     /// When User clicks on New File button #new_file a pvs file is created and showed in file list box
     d3.select("#new_file").on("click", function ( ) {	
 
-	ListView.new_file(currentProject, editor, ws);
-    ListView.showContentFileInEditor(currentProject, editor);
+        ListView.new_file(currentProject, editor, ws);
+        ListView.showContentFileInEditor(currentProject, editor);
 	   
 
-      /******MYTEST*****/
-	editor.on("change", function (e) {
-                //ideally one should use information from ace to set the dirty mark on the document
-                //e.g editor.getSession().getUndoManager().hasUndo();
-		if( modifiedUser)
-		{
-		    return;
-		}
-		pvsWriter.userModification(e, editor);
-            });
-       modifiedUser = 1;
-       pvsWriter.newPVSSpecification("myTheory",editor);
-       /*pvsWriter.addState(myState[0],editor);
-       pvsWriter.addTransition("E_RequestToStart", 1, editor);
-       pvsWriter.addConditionInTransition(1, myState[0], myState[1],editor); 
-       pvsWriter.addConditionInTransition(1, myState[0], myState[1],editor); 
-       pvsWriter.addEntryCondition(1, "current_state = Checking",editor);
-       pvsWriter.addEntryCondition(1, "current_state = s1", editor, "OR");
-       pvsWriter.setInitialState("S1", editor);*/
-       //pvsWriter.addTransition("E_RequestToStart", 1, editor);
-       modifiedUser = 0;
 	
     });
 
@@ -799,8 +766,7 @@ define(function (require, exports, module) {
     d3.select("#startEmulink").on("click", function () {
 	
 	  stateMachine.init(editor);
-//	  this.style.visibility = 'hidden';  	
-//          document.getElementById('state_machine_toolbar_menu').style.top = '600px';
+
     });    
 	
     
