@@ -19,19 +19,24 @@ define(function (require, exports, module) {
         d3                      = require("d3/d3"),
         queue                   = require("d3/queue"),
         imageMapper             = require("imagemapper"),
-	NewWidgetView		= require("pvsioweb/forms/newWidget"),
-	EditWidgetView		= require("pvsioweb/forms/editWidget"),
-	WidgetManager		= require("pvsioweb/WidgetManager")(),
-	uidGenerator		= require("util/uuidGenerator"),
-	stateMachine            = require("../lib/statemachine/stateMachine"),
+	    NewWidgetView		    = require("pvsioweb/forms/newWidget"),
+	    EditWidgetView		    = require("pvsioweb/forms/editWidget"),
+	    WidgetManager		    = require("pvsioweb/WidgetManager")(),
+	    uidGenerator		    = require("util/uuidGenerator"),
+	    stateMachine            = require("../lib/statemachine/stateMachine"),
         handlerFile             = require("../lib/fileHandler/fileHandler"),
         pvsWriter               = require("../lib/statemachine/stateToPvsSpecificationWriter"),
-	pvsLanguage		= require("../lib/statemachine/pvsLanguage");
+	    pvsLanguage		        = require("../lib/statemachine/pvsLanguage");
 
 
     var currentProject = new Project(""), ws, pvsFilesListBox, fileContents = {};
     var tempImageName, tempSpecName, mapCreator;
+    ace.require("ace/ext/language_tools");
+    
     var editor = ace.edit("editor");
+    editor.setOptions({
+        enableBasicAutocompletion: true
+    });
 	editor.getSession().setMode('ace/mode/pvsLanguage');
 
 
@@ -753,6 +758,20 @@ define(function (require, exports, module) {
         ListView.deleteFile(currentProject, editor, ws );
         
 	
+    });
+    
+    /// User wants to perform an undo operation on the Editor    
+    d3.select("#undoEditor").on("click", function () {
+        pvsWriter.undo();
+    });
+        
+    /// User want to perform a redo operation on the Editor 
+    d3.select("#redoEditor").on("click", function () {
+        pvsWriter.redo();     
+    });
+    
+    d3.select("#editor").on("click", function () {        
+        pvsWriter.click();
     });
 	
    /* d3.select("#infoBoxModifiable").on("change", function () {

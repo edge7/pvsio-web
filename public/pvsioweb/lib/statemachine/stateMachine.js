@@ -43,10 +43,14 @@ var add_node = function (positionX, positionY, label) {
 			py   : positionY,
 			height: minBoxHeight,
 			width : minBoxWidth,
-			weight: 0
+			weight: 0,
+            warning : new Object()
 	};
+    node.warning.notPresentInSpec = false;
+    node.warning.labelAlreadyUsed = false;
 	// add node
 	graph.nodes.set(node.id, node);
+    
 	// update pvs theory accordingly
 	pvsWriter.addState(node);
 }
@@ -106,7 +110,8 @@ function showInformationInTextArea(element) {
 	textArea.value = name;
 }
 
-function changeTextArea(node) {
+function changeTextArea(node, path) {
+    
 	if( selected_nodes.length == 0 && selected_edges.length == 0 ) {
 	    document.getElementById('infoBox').value = " ";
         document.getElementById('infoBoxModifiable').value= " ";
@@ -127,14 +132,43 @@ function changeTextArea(node) {
 			if(d.id == oldId) { return realName; }
 			return d.name;
 		});
-
+        console.log("Change Name In node");
 		var newNode = graph.nodes.get(oldId);
 		newNode.name = realName;
 		graph.nodes.set(oldId, newNode);
 
 	    /// Change name in the PVS specification
 	    pvsWriter.changeStateName(oldName, realName );
+        
+        return;
 	}
+    if( selected_edges.length )
+    {
+        console.log("change name in edge");
+        var object = selected_edges[ selected_edges.length - 1];
+        var sourceName = object.source.name;
+        var targetName = object.target.name;
+        var oldId = object.id;
+		var oldName = object.name;
+        var counter = 0;
+        
+        path.selectAll("text").text(function(d) { 
+            if(d.name == oldName ) { counter ++; }
+			if(d.id == oldId) { return realName; }
+			return d.name;
+		});
+		var newNode = graph.edges.get(oldId);
+		newNode.name = realName;
+		graph.edges.set(oldId, newNode);
+        
+        /// Change name in the PVS specification
+        pvsWriter.changeFunName(oldName, realName, sourceName, targetName, counter);
+        console.log(counter);
+        
+        
+       
+        
+    }
 }
 
 function set_editor_mode(m) {
@@ -160,7 +194,16 @@ function toggle_editor_mode(m) {
 	return set_editor_mode(MODE.DEFAULT);
 }
 
-
+function getNodesInDiagram()
+{
+    var arrayNode = graph.nodes.values();        
+    return arrayNode;
+}
+function getEdgesInDiagram()
+{
+    var edgesNode = graph.edges.values();
+    return edgesNode;
+}   
 /// Function init is the entry point of the Emulink graphical editor
 function init(_editor) {
 	// Start Emulink
@@ -351,6 +394,8 @@ var emulink = function() {
 				else {
 					showInformationInTextArea(d);
 					pvsWriter.focusOnFun(d);
+                    selected_nodes.splice(0, selected_nodes.length);
+                    selected_edges.splice(0, selected_edges.length);
 					selected_edges.push(d);
 				}
 			});
@@ -366,6 +411,8 @@ var emulink = function() {
 				else {
 					showInformationInTextArea(d);
 					pvsWriter.focusOnFun(d);
+                    selected_nodes.splice(0, selected_nodes.length);
+                    selected_edges.splice(0, selected_edges.length);
 					selected_edges.push(d);
 				}
 			});
@@ -439,11 +486,18 @@ var emulink = function() {
 					}
 					else {
 						// if the ctrl key is not pressed, reset selection first, and then select the node
+                        selected_edges.splice(0, selected_edges.length);
+
 						selected_nodes.splice(0,selected_nodes.length);
 						selected_nodes.push(d);
+        
+                        //START WriterModification: I need to select the node to be able to delete it when user types 'canc'
+                        selected_node = d;
+                        //END 
+                                                
 						// update borders of nodes
 						node.selectAll("rect").style("stroke", "").style("stroke-width", "");
-						d3.select(this).style("stroke", "black").style("stroke-width", "3");
+
 						// update information in the text area
 						showInformationInTextArea(d);
 						// highlight code in the pvs theory
@@ -622,6 +676,7 @@ var emulink = function() {
 				//LASTMOD
 				graph.nodes.remove(selected_node.id);
 				spliceLinksForNode(selected_node);
+                pvsWriter.removeState(selected_node, graph.nodes.keys().length);
 
 				} else if(selected_link) {
 				//links.splice(links.indexOf(selected_link), 1);
@@ -674,9 +729,8 @@ var emulink = function() {
 
 	d3.select("#infoBoxModifiable")
 	  .on("change", function () {
-		changeTextArea(node);
+		changeTextArea(node, path);
 		restart();
-		console.log(graph.nodes.values());
 	  });
 
 
@@ -685,6 +739,7 @@ var emulink = function() {
 	d3.select(window).on('keydown', keydown).on('keyup', keyup);
 	restart();  
 }
+     
 
 
 module.exports = {
@@ -692,7 +747,9 @@ module.exports = {
 	changeTextArea : changeTextArea,
 	add_node_mode: function(){ return toggle_editor_mode(MODE.ADD_NODE); },
 	add_transition_mode: function() { return toggle_editor_mode(MODE.ADD_TRANSITION); },
-	add_self_transition_mode: function() { return toggle_editor_mode(MODE.ADD_SELF_TRANSITION); }
+	add_self_transition_mode: function() { return toggle_editor_mode(MODE.ADD_SELF_TRANSITION); },
+    getNodesInDiagram : getNodesInDiagram,
+    getEdgesInDiagram : getEdgesInDiagram
 };
 
 
