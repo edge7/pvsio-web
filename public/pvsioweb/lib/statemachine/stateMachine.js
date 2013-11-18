@@ -121,6 +121,9 @@ function changeTextArea(node, path) {
 	var content = textArea.value;
 	var name = content.split(';')[0];
 	var realName = name.substring(name.indexOf(':') + 2);
+    var newOperation = realName.substring(realName.indexOf('{') + 1, realName.indexOf('}') );
+    
+    console.log(newOperation);
 		
 	if( selected_nodes.length ) {    
 	    /// Change name in the canvas 
@@ -149,24 +152,35 @@ function changeTextArea(node, path) {
         var sourceName = object.source.name;
         var targetName = object.target.name;
         var oldId = object.id;
-		var oldName = object.name;
+		var oldName = object.name.indexOf('{') == -1 ? object.name : object.name.substring(0,object.name.indexOf('{'));
         var counter = 0;
+        var newName = realName;
         
         path.selectAll("text").text(function(d) { 
-            if(d.name == oldName ) { counter ++; }
-			if(d.id == oldId) { return realName; }
+            
+            var tmp = d.name.indexOf('{') == -1 ? d.name : d.name.substring(0,d.name.indexOf('{'));            
+            if(tmp == oldName ) { counter ++; }
+			if( d.id == oldId) { 
+                if( ! newOperation)
+                    return realName;
+                
+                realName = realName.substring(0, realName.indexOf('{'));
+       
+                var newName = tmp +'{' + newOperation + '}';
+                return newName;
+            }
 			return d.name;
 		});
 		var newNode = graph.edges.get(oldId);
-		newNode.name = realName;
+        
+		newNode.name = newName;
 		graph.edges.set(oldId, newNode);
         
         /// Change name in the PVS specification
-        pvsWriter.changeFunName(oldName, realName, sourceName, targetName, counter);
-        console.log(counter);
+        pvsWriter.changeFunName(oldName, realName, sourceName, targetName, counter);   
+        if( newOperation )
+            pvsWriter.addOperationInCondition(realName, sourceName, targetName, newOperation);
         
-        
-       
         
     }
 }
@@ -397,6 +411,7 @@ var emulink = function() {
                     selected_nodes.splice(0, selected_nodes.length);
                     selected_edges.splice(0, selected_edges.length);
 					selected_edges.push(d);
+                    selected_node = null;
 				}
 			});
 		pathCanvas
@@ -492,7 +507,7 @@ var emulink = function() {
 						selected_nodes.push(d);
         
                         //START WriterModification: I need to select the node to be able to delete it when user types 'canc'
-                        selected_node = d;
+                        //selected_node = d;
                         //END 
                                                 
 						// update borders of nodes
@@ -732,8 +747,23 @@ var emulink = function() {
 		changeTextArea(node, path);
 		restart();
 	  });
-
-
+    
+    d3.select("#addFieldState")
+      .on("click", function () {
+          var newField = prompt("Please enter name and type of the field separated by comma", "current_output, int");
+          
+          if( !newField)
+              return;
+          
+          newField = newField.split(',');
+          if( newField.length != 2 )
+          {
+              alert("Error in adding field");
+              return;
+          }
+          pvsWriter.addFieldInState(newField[0], newField[1]);
+          console.log(newField);
+      });
 	// app starts here
 	svg.on('mousedown', mousedown).on('mousemove', mousemove).on('mouseup', mouseup);
 	d3.select(window).on('keydown', keydown).on('keyup', keyup);

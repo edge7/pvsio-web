@@ -43,7 +43,7 @@ define(function (require, exports, module) {
 
 function newPVSSpecification(nameTheory, editor)
 {
-	    writer = new writerOnContent(nameTheory, editor);
+	    writer = new WriterOnContent(nameTheory, editor);
         drawer = require("../../lib/statemachine/stateMachine");
 }
 
@@ -60,17 +60,52 @@ function addState(newState)
         var hasBeenStateAlreadyAdded = false;
         ///Get StateNames in String format: StateName: TYPE = {X0,X1...};
         var stateNamesString = writer.getStateNames();
-        ///Build an array filled with the labels of the nodes: [X0,X1..]
-        var stateNamesArray = stateNamesString.substring(stateNamesString.indexOf('{') + 1,stateNamesString.indexOf('}') )
+        ///Building an array filled with the labels of the nodes: [X0,X1..]
+        var stateNamesArray = stateNamesString.substring(stateNamesString.indexOf('{') + 1, stateNamesString.indexOf('}'))
                                               .split(',');
     
         /// Check If newState.name is already in stateNames (checking is made only if stateNamesArray is defined ) 
-        if( stateNamesArray ){ hasBeenStateAlreadyAdded = itemIsContained(stateNamesArray, newState.name); }
+        if( stateNamesArray){ hasBeenStateAlreadyAdded = itemIsContained(stateNamesArray, newState.name); }
     
-        if( ! hasBeenStateAlreadyAdded ) { writer.addState(newState.name); }
+        if( !hasBeenStateAlreadyAdded) { writer.addState(newState.name); }
         else                             { console.log("ERROR addState: Trying to add a state already added "); }
 
         noFocus();
+}
+ 
+/** 
+ *  Add field in PVS state  
+ *
+ *  @param {string} nameField   - Name of the new field
+ *  @param {string} typeName    - Type of the new field
+ *
+ *  @returns void 
+ *	      
+ */
+function addFieldInState(nameField, typeName)
+{
+    noFocus();
+    writer.saveCursorPosition();
+    writer.addFieldInState(nameField, typeName);
+    writer.restoreCursorPosition();
+    
+}
+/** 
+ *  Add operation to do in a condition  
+ *
+ *  @param {string} nameTrans     - Name of the transition which contains the condition
+ *  @param {string} sourceName    - Name of the source node in the condition
+ *  @param {string} targetName    - Name of the target node in the condition
+ *  @param {string} operation     - Operation is to be added 
+ *  @returns void 
+ *	      
+ */  
+function addOperationInCondition(nameTrans, sourceName, targetName, operation)
+{
+    console.log(nameTrans, sourceName, targetName, operation);
+    noFocus();
+    writer.addOperationInCondition(nameTrans, sourceName, targetName, operation);
+        
 }
 
 /** 
@@ -83,7 +118,7 @@ function addState(newState)
  */
 function removeState(stateToRemove, nodeCounter)
 {
-    console.log("RemoveState, stateToPVsSpecificationWriter.js", stateToRemove);    
+    console.log("RemoveState, stateToPVsSpecificationWriter.js", stateToRemove);
     writer.removeState(stateToRemove.name, nodeCounter);
 }
 
@@ -98,7 +133,7 @@ function removeState(stateToRemove, nodeCounter)
 function addTransition(newTransition)
 {
 	writer.addTransition(newTransition );
-	noFocus();       
+	noFocus();    
 
 }
 
@@ -114,7 +149,7 @@ function addTransition(newTransition)
  */
 function addConditionInTransition(transitionName, source, target)
 {
-	writer.addConditionInTransition(transitionName, source.name, target.name );	
+	writer.addConditionInTransition(transitionName, source.name, target.name);	
 	//noFocus();
 }
 
@@ -125,6 +160,8 @@ function addConditionInTransition(transitionName, source, target)
  */
 function noFocus()
 {
+    writer.editor.find("");
+    
     if( ! writer )
         return;
     
@@ -152,30 +189,17 @@ function focusOnFun(edge)
 			        range: null,
                         }; 
 
-     var init = "%{\"_block\": \"BlockStart\" , \"_id\" : \"" + edge.name + "(st: (per_" + edge.name +"))\"}";
-     var end = " %{\"_block\": \"BlockEnd\" , \"_id\" : \"" + edge.name + "(st: (per_" + edge.name + "))\"}";
-	
-     var initSearch = writer.editor.find(init, objectSearch, true);
-     var endSearch = writer.editor.find(end, objectSearch, true);
-	
-     
-     range.start.row = initSearch.start.row;
+     var realNameEdge = edge.name.indexOf('{') == -1 ? edge.name : edge.name.substring(0, edge.name.indexOf('{'));
+     var arrayTag = writer.buildTagCond(realNameEdge, edge.source.name, edge.target.name );
+     var initSearch = writer.editor.find(arrayTag[0].replace(/(\r\n|\n|\r)/gm,""));
+     var endSearch = writer.editor.find(arrayTag[1].replace(/(\r\n|\n|\r)/gm,""));
+     writer.editor.find(""); 
+    
+     range.start.row = initSearch.start.row + 1;
      range.start.column = initSearch.start.column;
-     range.end.row = endSearch.end.row;
-     range.end.column = endSearch.end.column;
-
-     objectSearch.range = range;
-	
-     init = "st`current_state = " + edge.source.name;
-     end = "IN enter_into(" + edge.target.name + ")(new_st)";
+     range.end.column = 100;
+     range.end.row = endSearch.start.row - 1;
      
-     initSearch = writer.editor.find(init, objectSearch, true );
-     endSearch = writer.editor.find(end, objectSearch, true ); 
-
-     range.start.row = initSearch.start.row;
-     range.start.column = initSearch.start.column;
-     range.end.row = endSearch.end.row;
-     range.end.column = endSearch.end.column;
      
      /// Saving range that is going to be highlighted
      writer.lastMarker = range;
@@ -225,22 +249,23 @@ function changeStateName(oldName, newName)
  *  @param {string} newName      - new name of the edge
  *  @param {string} sourceName   - name of the source node of the transition 
  *  @param {string} deleteName   - name of the target node of the transition 
- *  @param {integer} counter - number of the conditions inside the function (if one, we can delete it completely)
+ *  @param {integer} counter     - number of the conditions inside the function (if one, we can delete it completely)
  *  @returns void 
  *	      
  */
 function changeFunName(oldName, newName, sourceName, targetName, counter)
 {
-    
+    // If counter > 1 there are other conditions in the trans. function so we cannot delete it
+    // We just need to move the condition in a new trans. function 
     if( counter > 1 )
     {   
-        writer.deleteCondInTrans(oldName, sourceName, targetName);
-        writer.addTransition(newName );
-        writer.addConditionInTransition(newName, sourceName, targetName);
+        writer.deleteCondInTrans(oldName, sourceName, targetName); // Delete transition 
+        writer.addTransition(newName ); // Create a new transition (if already present it will be not created)
+        writer.addConditionInTransition(newName, sourceName, targetName); // Add condition 
     }
     else 
     {
-        writer.deleteTransition(oldName);   
+        writer.deleteTransition(oldName);  // Just delete condition  
     }
     
 }
@@ -270,7 +295,7 @@ function itemIsContained(array, item)
 
 }
     
-function writerOnContent(nameTheory, editor)
+function WriterOnContent(nameTheory, editor)
 {
 	this.nameTheory = nameTheory;
     this.defaultStateName = "  StateName: TYPE";
@@ -286,13 +311,16 @@ function writerOnContent(nameTheory, editor)
 		       "  %{\"_block\" : \"BlockEnd\", \"_id\" : \"StateName\"  }\n\n" +
 		       "  %{\"_block\" : \"BlockStart\", \"_id\" : \"State\"}\n" +
 		       "  State: TYPE = [#\n"+ 
-                       "    current_state: StateName \n" +
+                       "    current_state: StateName, \n" +
+                       "    previous_state: StateName \n" +
                        "  #]\n" +
-		       "  %{\"_block\" : \"BlockEnd\", \"_id\" : \"State\"]\n\n" +
+		       "  %{\"_block\" : \"BlockEnd\", \"_id\" : \"State\"}\n\n" +
 		       "  %{ \"_block\" : \"BlockStart\", \"_id\" : \"initial_state\"}\n" +
 	               "  initial_state: State \n" +
 		       "  %{ \"_block\" : \"BlockEnd\", \"_id\" : \"initial_state\"}\n\n" +
-                       " END " + this.nameTheory;    
+               "  leave_state(s: StateName)(st: State): State = st WITH [ previous_state := s ] \n\n" +
+               "  enter_into(s: StateName)(st:State): State = st WITH [ current_state := s ] \n\n" +
+               " END " + this.nameTheory;    
 
 	editor.setValue(this.content);
 	editor.clearSelection();
@@ -378,7 +406,8 @@ function writerOnContent(nameTheory, editor)
            for( var i = 0; i<length; i++)
            {
                 var currentEdge = edgesInDiagram[i];
-                var currentName = currentEdge.name;
+                var currentName = currentEdge.name.indexOf('{') == -1 ? currentEdge.name 
+                                                                      : currentEdge.name.substring(0, currentEdge.name.indexOf('{'));
                 var currentSource = currentEdge.source.name;
                 var currentTarget = currentEdge.target.name;
                 
@@ -412,14 +441,16 @@ function writerOnContent(nameTheory, editor)
                                           replace(/(\r\n|\n|\r)/gm,"").replace(/\s+/g,"");
       
                
-                if( currentCond !== "new_st=leave_state(" + currentSource + ")" + "INenter_into(" + currentTarget +
+               /* FIXME:
+                if( currentCond !== "new_st=leave_state(" + currentSource + ")(st)" + "INenter_into(" + currentTarget +
                                     ")(new_st)")
                 {
                     console.log("Error in condition in function " + currentName );
                     debug.value = debug.value + " error in condition, it should be : " + 
-                                  "new_st=leave_state(" + currentSource + ")" + "IN enter_into(" + currentTarget +
+                                  "new_st=leave_state(" + currentSource + ")(st)" + "IN enter_into(" + currentTarget +
                                     ")(new_st)";
-                }             
+                }         
+                */
                 
                 
            }
@@ -431,14 +462,9 @@ function writerOnContent(nameTheory, editor)
         if( writer.userIsModifying ) { writer.handleUserModificationOnEditor(); }
         else                         { console.log("Writer has modified editor content"); }
     }
-
-    /********* End Functions a$bout Editor ************************************************/
     
     editor.getSession().on('change', this.changeEditor );    
     this.userIsModifying = 1;
-
-	
-	/********** END Constructor ********/	
 
     this.getLockOnEditor = function()
     {
@@ -464,7 +490,9 @@ function writerOnContent(nameTheory, editor)
 				                range: null,
 			               }; 
 
-
+        startTag = startTag.replace(/(\r\n|\n|\r)/gm,"");
+        endTag = endTag.replace(/(\r\n|\n|\r)/gm,"");
+        
 		var initSearch = editor.find(startTag, objectSearch, true);
 		var endSearch  = editor.find(endTag, objectSearch, true);
 		var content;	
@@ -474,14 +502,58 @@ function writerOnContent(nameTheory, editor)
         
 		range.start.column = 0;
 		range.end.column= 11111; ///FIXME
-		range.start.row = initSearch.end.row ;
-		range.end.row = endSearch.end.row - 1;
+		range.start.row = initSearch.start.row +1 ;
+		range.end.row = endSearch.start.row -1;
 		
-		//Content should be the list of the states
 		content = editor.session.getTextRange(range); 
         
         return content;
         
+    }
+    this.addOperationInCondition = function(nameTrans, sourceName, targetName, operation)
+    {
+        this.getLockOnEditor();
+        
+        operation = "   new_st = new_st WITH [ " + operation + " ]";
+        var arrayTag = this.buildTagCond(nameTrans, sourceName, targetName);
+        var content = this.getContentBetweenTags(arrayTag[0], arrayTag[1]);
+        console.log("content ",content);
+        var newContent = content.substring(0, content.indexOf('IN') - 9) + "," + "\n    " + operation + "\n    " +
+                         "  IN " +content.substring(content.indexOf("IN") + 2);
+        
+        this.editor.find(arrayTag[0] + content + arrayTag[1]);
+        this.editor.replace(arrayTag[0] + newContent + arrayTag[1]);
+        console.log(newContent);
+        this.leaveLockOnEditor();
+    }
+    this.addFieldInState = function(nameField, typeName)
+    {
+        var startTag = "%{\"_block\" : \"BlockStart\", \"_id\" : \"State\"}";
+        var endTag = "%{\"_block\" : \"BlockEnd\", \"_id\" : \"State\"}";
+        
+        var oldContent = this.getContentBetweenTags(startTag, endTag);
+        /// Getting just name and type 
+        var content = oldContent.substring(oldContent.indexOf('#') + 1, oldContent.lastIndexOf('#') );
+        
+        var arrayFields = content.split(',');
+        /// Inserting new values
+        arrayFields.push(nameField + ': ' + typeName);
+        
+        var newContent ="  State: TYPE = [#\n";
+        var length = arrayFields.length ;
+        for( var i = 0; i < length ; i ++)
+        {
+             var comma = (i == (length - 1 )) ? "\n" : ",\n" ;
+             newContent = newContent + "     "  +  arrayFields[i].replace(/(\r\n|\n|\r)/gm,"").replace(/\s+/g,"")  +  comma ;
+        }   
+        newContent = newContent + "  #]";
+        
+        this.getLockOnEditor();
+        
+        this.editor.find(oldContent);
+        this.editor.replace(newContent);
+        
+        this.leaveLockOnEditor();
     }
 	this.addState = function( newState )
 	{  
@@ -532,7 +604,7 @@ function writerOnContent(nameTheory, editor)
 
 	} 
         
-    this.removeState = function( stateToRemove, stateCounter )
+    this.removeState = function(stateToRemove, stateCounter )
     {
             this.getLockOnEditor();
         
@@ -595,8 +667,7 @@ function writerOnContent(nameTheory, editor)
 			  "  " + newTransition + "(st:(per_" + newTransition + " )):State = \n" +
 			  "  COND\n" +
 			  "  ENDCOND\n" +
-			  "  %{\"_block\": \"BlockEnd\" , \"_id\" : \"" + newTransition + "(st: (per_" + newTransition + "))\"}\n\n"; 
-			  
+			  "  %{\"_block\": \"BlockEnd\" , \"_id\" : \"" + newTransition + "(st: (per_" + newTransition + "))\"}\n\n"; 			  
 			
 		editor.insert("\n" + content);
         
@@ -606,10 +677,10 @@ function writerOnContent(nameTheory, editor)
     {
            var tagCondArray = new Array();
         
-           tagCondArray.push("\n  %{\"_block\": \"CondStart\", \"_id\" : \"tick(st: (per_tick))\", \"_source\" : " + sourceName + ", \"_target\" : " 
+           tagCondArray.push("\n  %{\"_block\": \"CondStart\", \"_id\" : \"" + nameTransition + "(st: (per_" + nameTransition +"))\", \"_source\" : " + sourceName + ", \"_target\" : " 
                       + targetName + "}\n");
         
-           tagCondArray.push("\n  %{\"_block\": \"CondEnd\", \"_id\" : \"tick(st: (per_tick))\", \"_source\" : " + sourceName + ", \"_target\" : " 
+           tagCondArray.push("\n  %{\"_block\": \"CondEnd\", \"_id\" : \"" + nameTransition + "(st: (per_" + nameTransition +"))\", \"_source\" : " + sourceName + ", \"_target\" : " 
                       + targetName + "}");
         
            return tagCondArray;
@@ -627,20 +698,28 @@ function writerOnContent(nameTheory, editor)
 			        "  " + nameTransition + "(st:(" + nameTransition + " )):State = \n" ;
 
 		var endLine = "  %{\"_block\": \"BlockEnd\" , \"_id\" : \"" + nameTransition + "(st: (per_" + nameTransition + "))\"}\n\n";
-		
+        var firstTag = "  %{\"_block\": \"BlockStart\" , \"_id\" : \"" + nameTransition + "(st: (per_" + nameTransition + "))\"}\n";
+        var secondTag ="  %{\"_block\": \"BlockEnd\" , \"_id\" : \"" + nameTransition + "(st: (per_" + nameTransition + "))\"}\n";
+		var oldContent = this.getContentBetweenTags(firstTag, secondTag );
+        var comma ;
+        if( oldContent.indexOf('%') == -1 )
+            comma = '';
+        else
+            comma = ',';
+        
+        console.log("oldContent", oldContent);
 		var objectSearch = { 
   				     wholeWord: false,
 				     range: null,
 			           }; 
-		var endSearch = editor.find(endLine, objectSearch, true);
+		var endSearch = editor.find(oldContent, objectSearch, true);
 	
-		//Attention to , (coma)!!! FIXME
-		editor.gotoLine(endSearch.end.row -3 , 1000, true);
+		editor.gotoLine(endSearch.start.row +2  , 1000, true);
         
         editor.insert(condTag[0]);
         
-		editor.insert("     st`current_state = "  + sourceName + "\n    -> LET new_st = leave_state("+sourceName +")" +
-                              "\n        IN enter_into("+ targetName + ")(new_st)");
+		editor.insert("     st`current_state = "  + sourceName + "\n    -> LET new_st = leave_state("+sourceName +")(st)" +
+                              "\n        IN enter_into("+ targetName + ")(new_st)" + comma);
         
         editor.insert(condTag[1]);
         
@@ -661,14 +740,61 @@ function writerOnContent(nameTheory, editor)
         this.leaveLockOnEditor();
 	
 	}
-      
-    this.deleteCondInTrans = function(oldName, sourceName, targetName)
+    this.buildTagAndContentCondition = function(transName, sourceName, targetName)
+    {
+        var tag = this.buildTagCond(transName, sourceName, targetName );
+        var tagInit = tag[0];
+        var tagEnd  = tag[1];
+        var content = "     st`current_state = "  + sourceName + "\n    -> LET new_st = leave_state("+sourceName +")(st)" +
+                              "\n        IN enter_into("+ targetName + ")(new_st)";
+        
+        return tagInit + content + tagEnd ;       
+    }
+    this.buildTagFunction = function(transName)
+    {
+        var arrayTagFunc = new Array();
+        arrayTagFunc.push("  %{\"_block\": \"BlockStart\" , \"_id\" : " + transName + "(st: (per_" + transName + "))\"}");
+        arrayTagFunc.push("  %{\"_block\": \"BlockEnd\" , \"_id\" : " + transName + "(st: (per_" + transName + "))\"}");
+        
+        return arrayTagFunc;           
+    }
+    this.buildTagPerFunction = function(transName)
+    {
+        var arrayTagPerFun = new Array();
+        arrayTagPerFun.push("  %{\"_block\": \"BlockStart\" , \"_id\" : \"per_" + transName + "(st:State)\"}");
+        arrayTagPerFun.push("  %{\"_block\": \"BlockEnd\" , \"_id\" : \"per_" + transName + "(st:State)\"}");
+        return arrayTagPerFun;
+    }
+    this.deleteContent = function(content)
+    {
+        this.editor.find(content);
+        this.editor.replace(" ");
+    }
+    this.deleteCondInTrans = function(transName, sourceName, targetName)
     { 
        console.log("deleteCondInTrans");
+
+       var tagCond = this.buildTagCond(transName, sourceName, targetName);
+       var content = this.getContentBetweenTags(tagCond[0], tagCond[1]);
+    
+       this.deleteContent(tagCond[0] + content + tagCond[1]);
     }
-    this.deleteTransition = function(oldName) 
+    this.deleteTransition = function(nameFun) 
     {
         console.log("deleteTrans");
+        
+        var tagFun = this.buildTagFunction(nameFun);
+        var tagPerFun = this.buildTagPerFunction(nameFun);
+        var contentFun;
+        
+        var contentPer = this.getContentBetweenTags(tagPerFun[0], tagPerFun[1]);
+        this.deleteContent(tagPerFun[0] + contentPer + tagPerFun[1]);
+        
+        contentFun = this.getContentBetweenTags(tagFun[0], tagFun[1]);        
+        this.deleteContent(tagFun[0] + contentFun + tagFun[1]);
+        
+        
+        
     }
     this.getStateNames = function()
     {
@@ -760,7 +886,9 @@ function keepTrackEditorContentHashTable()
         changeFunName : changeFunName, 
         undo : undo,
         redo : redo,
-        click : noFocus
+        click : noFocus,
+        addFieldInState : addFieldInState,
+        addOperationInCondition: addOperationInCondition 
 	               /*addEntryCondition : addEntryCondition,
 		       setInitialState   : setInitialState,
 		       userModification  : userModification,
