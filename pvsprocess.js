@@ -45,20 +45,51 @@ module.exports = function () {
 		if (dir) {
 			dir = dir.substr(-1) !== "/" ? (dir + "/") : dir;
 			workspaceDir = dir;
+            process.chdir(workspaceDir);
 			return o;
 		}
 		return workspaceDir;
 	};
 	
+	function filterLines(lines) {
+		return lines.filter(function (d) {
+			return wordsIgnored.indexOf(d.trim()) < 0;
+		});
+	}
+	
+	function arrayToOutputString(lines) {
+		return lines.join("").replace(/,/g, ", ").replace(/\s+\:\=/g, ":=").replace(/\:\=\s+/g, ":=");
+	}
+	
+	function processDataFunc() {
+		var res = [];
+		return function (data, cb) {
+			var lines = data.split("\n");
+			if (readyString === lines[lines.length - 1].trim()) {
+				if (cb && typeof cb === "function") {
+					lines.pop();//get rid of last line
+					res = res.concat(filterLines(lines));
+					cb(arrayToOutputString(res));
+					res = [];
+					return true;
+				}
+			} else {
+				res = res.concat(filterLines(lines));
+			}
+			return false;
+		};
+	}
 	/**
 	 * starts the pvs process with the given sourcefile 
 	 * @param {String} filename source file to load with pvsio
 	 * @param {function({type:string, data:array})} callback function to call when any data is received  in the stdout
-     * @param {function} callback to call when processis ready
+	 * @param {function} callback to call when processis ready
 	 */
 	o.start = function (file, callback, processReadyCallback) {
-		filename = o.workspaceDir() + file;
+		filename = file;
         function onDataReceived(data) {
+			// this shows the original PVSio output
+			util.log(data);
 			var lines = data.split("\n").map(function (d) {
 				return d.trim();
 			});
@@ -70,25 +101,26 @@ module.exports = function () {
 			}));
 			
 			if (processReady && lastLine.indexOf(readyString) > -1) {
-                var outString = output.join("").replace(/,/g, ", ").replace(/\s+\:\=/g, ":=").replace(/\:\=\s+/g, ":=");
-                //This is a hack to remove garbage collection messages from the output string before we send to the client
-                var croppedString = outString.substring(0, outString.indexOf("(#"));
-                outString = outString.substring(outString.indexOf("(#"));
-                util.log(outString);
+				var outString = arrayToOutputString(output);
+				//This is a hack to remove garbage collection messages from the output string before we send to the client
+				///TODO not sure if this works as intended
+				var croppedString = outString.substring(0, outString.indexOf("(#"));
+				outString = outString.substring(outString.indexOf("(#"));
 				callback({type: "pvsoutput", data: [outString]});
 				//clear the output
 				output  = [];
 			} else if (lastLine.indexOf(readyString) > -1) {
-                //last line of the output is the ready string
+				//last line of the output is the ready string
 				processReadyCallback({type: "processReady", data: output});
 				processReady = true;
 				output = [];
+				pvs.dataProcessor(processDataFunc());
 			}
 		}
 		
 		function onProcessExited(code) {
 			processReady = false;
-			var msg = "pvsio process exited with code " + code;
+			var msg = "pvsio process exited with code " + code + ".\n" + output.join("");
 			util.log(msg);
 			callback({type: "processExited", data: msg, code: code});
 		}
@@ -98,7 +130,6 @@ module.exports = function () {
 			onProcessExited: onProcessExited});
 		
 		util.log("pvsio process started with file " + filename + "; process working directory is :" + o.workspaceDir());
-
 		return o;
 	};
 	
@@ -107,34 +138,12 @@ module.exports = function () {
 	 * will be by the 'on data' event of the process standard output stream
 	 * @param {string} command the command to send to pvsio
 	 */
-	o.sendCommand = function (command) {
+	o.sendCommand = function (command, callback) {
 		util.log("sending command " + command + " to process");
-		pvs.sendCommand(command);
+		pvs.sendCommand(command, callback);
 		return o;
 	};
-	
-	/**
-	 * gets the source code pvs io is executing
-     * @param {string} path the path the to file whose content is to be fetched
-	 * @param {function({type:string, data, message:string})} callback callback to execute when sourcecode has been loaded
-	 * @returns {this}
-	 */
-	o.readFile = function (path, callback) {
-        pvs.readFile(path, callback);
-		return o;
-	};
-	
-	/**
-	 * writes  the file passed to the disk
-     * @param {fileName:string, fileContent: string} data Object representing the sourcecode to save
-     * @param {function ({type: string, data: {fileName: string}})} callback function to invoke when the file has been saved
-	 */
-	o.writeFile = function (path, data, callback) {
-        pvs.writeFile(path, data, callback);
-		return o;
-	};
-	
-	
+    
 	/**
 	 * closes the pvsio process
      * @param {string} signal The signal to send to the kill process. Default is 'SIGTERM'

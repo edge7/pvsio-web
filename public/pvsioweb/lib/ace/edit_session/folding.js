@@ -637,7 +637,7 @@ function Folding() {
 
     this.foldAll = function(startRow, endRow, depth) {
         if (depth == undefined)
-            depth = 100000; // JSON.stringify doesn't hanle Infinity
+            depth = 100000; // JSON.stringify doesn't handle Infinity
         var foldWidgets = this.foldWidgets;
         endRow = endRow || this.getLength();
         startRow = startRow || 0;

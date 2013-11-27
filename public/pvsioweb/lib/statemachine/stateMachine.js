@@ -53,6 +53,7 @@ var add_node = function (positionX, positionY, label) {
     
 	// update pvs theory accordingly
 	pvsWriter.addState(node);
+    return node;
 }
 var update_node_size = function (id, width, height) {
 	var theNode = graph.nodes.get(id);
@@ -86,6 +87,7 @@ var editor_mode = MODE.DEFAULT;
 
 var selected_nodes = [];
 var selected_edges = [];
+var ws;
 
 // creation of svg element to draw the graph
 var width =  930;
@@ -95,6 +97,44 @@ var svg = d3.select("#ContainerStateMachine").append("svg").attr("width", width)
 
 var links;
 
+function restoreGraph(graphToRestore, editor, ws, currentProject, pm)
+{
+    console.log("restoreGraph", graphToRestore);
+    init(editor, ws, currentProject, pm);
+    var nodesToRestore = graphToRestore.nodes;
+    var edgesToRestore = graphToRestore.edges;
+    var workAround = new Array();
+    var comeOn = new Array();
+    for( var id in nodesToRestore)
+    {
+         console.log(nodesToRestore[id]);
+         var currentNode = nodesToRestore[id];
+         console.log("ReSt ",currentNode.x, currentNode.y);
+         workAround.push(currentNode);
+         comeOn.push(add_node(currentNode.x, currentNode.y, currentNode.label));
+    }
+    for( var id in edgesToRestore)
+    {
+         console.log(edgesToRestore[id]);
+         var currentEdge = edgesToRestore[id];
+         for( var i = 0; i < workAround.length; i++ )
+         {
+             if ( workAround[i].name == currentEdge.source.name )
+                 currentEdge.source = comeOn[i];
+             
+             if( workAround[i].name == currentEdge.target.name )
+                 currentEdge.target = comeOn[i];
+         }
+         add_edge(currentEdge.source, currentEdge.target, currentEdge.label);
+    }    
+    emulink();
+}
+
+function getGraphDefinition()
+{
+    return JSON.stringify(graph);    
+}
+    
 function showInformationInTextArea(element) {
 	var textArea = document.getElementById("infoBox");
 	var type = "TYPE:   " ;
@@ -113,6 +153,7 @@ function showInformationInTextArea(element) {
 function changeTextArea(node, path) {
     
 	if( selected_nodes.length == 0 && selected_edges.length == 0 ) {
+        
 	    document.getElementById('infoBox').value = " ";
         document.getElementById('infoBoxModifiable').value= " ";
 	}
@@ -219,16 +260,23 @@ function getEdgesInDiagram()
     return edgesNode;
 }   
 /// Function init is the entry point of the Emulink graphical editor
-function init(_editor) {
-	// Start Emulink
-	emulink();
+function init(_editor, wsocket, currentProject, pm) {
 
-	document.getElementById('infoBox').value = "TIP: Click on an Element to see  its property";
+    // After last modifications (Emulink commented) I need to create here SVG 
+    svg = d3.select("#ContainerStateMachine").append("svg").attr("width", width).attr("height", height).attr("id", "canvas").style("background", "#fffcec");
+
+    ws = wsocket;
+
+    document.getElementById('infoBox').value = "TIP: Click on an Element to see  its property";
 	document.getElementById('infoBoxModifiable').value= "TIP: After clicking on an element, editable properties will be showed here";
 	
 	/// creating new specification (just scheleton )
 	editor = _editor;
-	pvsWriter.newPVSSpecification("myTheory", editor); 
+	pvsWriter.newPVSSpecification("myTheory", editor, ws, currentProject, pm); 
+    
+    // Start Emulink
+	emulink();
+
 }
 
 var emulink = function() {
@@ -407,9 +455,10 @@ var emulink = function() {
 				}
 				else {
 					showInformationInTextArea(d);
-					pvsWriter.focusOnFun(d);
+					pvsWriter.focusOnFun(d, true);
                     selected_nodes.splice(0, selected_nodes.length);
                     selected_edges.splice(0, selected_edges.length);
+                    console.log("Add Edge in array");
 					selected_edges.push(d);
                     selected_node = null;
 				}
@@ -625,7 +674,8 @@ var emulink = function() {
 	}
 
 	function mousedown() {
-		if(editor_mode == MODE.ADD_NODE) {
+
+        if(editor_mode == MODE.ADD_NODE) {
 			// insert new node at point
 			var point = d3.mouse(this);
 			add_node(point[0], point[1]);
@@ -748,6 +798,21 @@ var emulink = function() {
 		restart();
 	  });
     
+    d3.select("#saveGraph")
+      .on("click", function () {
+         console.log("SAVING PICTURE");
+          var a = JSON.stringify(graph.nodes);
+          console.log("STRING" + a);
+          graph.edges = d3.map();
+          graph.nodes = d3.map();
+          restart();
+          console.log("QUI");
+          a = eval("("+a+")");
+          console.log(a);
+          graph.nodes.set(1, a);
+          restart();
+      });
+    
     d3.select("#addFieldState")
       .on("click", function () {
           var newField = prompt("Please enter name and type of the field separated by comma", "current_output, int");
@@ -773,13 +838,15 @@ var emulink = function() {
 
 
 module.exports = {
-	init: function (editor) { return init(editor); },
+	init: function (editor, wsocket, currentProject, pm) { return init(editor, wsocket, currentProject, pm); },
 	changeTextArea : changeTextArea,
 	add_node_mode: function(){ return toggle_editor_mode(MODE.ADD_NODE); },
 	add_transition_mode: function() { return toggle_editor_mode(MODE.ADD_TRANSITION); },
 	add_self_transition_mode: function() { return toggle_editor_mode(MODE.ADD_SELF_TRANSITION); },
     getNodesInDiagram : getNodesInDiagram,
-    getEdgesInDiagram : getEdgesInDiagram
+    getEdgesInDiagram : getEdgesInDiagram,
+    getGraphDefinition : getGraphDefinition,
+    restoreGraph : restoreGraph 
 };
 
 

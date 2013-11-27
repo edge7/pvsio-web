@@ -1,5 +1,4 @@
 #ContainerStateMachine  {
-	position:       absolute;
 	border:         2px solid;
 	background:     #fffcec;
  	width:          930px;
@@ -100,6 +99,7 @@ ul#context-menu li {
    display: none;
 }
 .button_inside_svg {
+
   position: absolute;
   top: 30px;
   width:30px;
@@ -109,10 +109,13 @@ ul#context-menu li {
   border-color: white;
   display:block;
   background-image: url("../../img/text.png");
+
+
 }
 
 .resize_button_inside_svg {
   position: absolute;
+
 }
 
 #infoBox {
@@ -125,22 +128,20 @@ ul#context-menu li {
   border-style: dotted;
   background :  #D0F18F;
   font-family: Tahoma, sans-serif;
-}
 
+}
 #infoBoxModifiable {
   position: absolute;
   top:	    150px;
   width:    180px;
-  height:   250px;
+  height:   300px;
   left:    940px;
   border-width : 5px;
   border-style: dotted;
   background :  #CEF6F5;
   font-family: Tahoma, sans-serif;
-
 }
 #warningDebug {
-
   position: absolute;
   top:	    280px;
   width:    180px;
@@ -150,5 +151,4 @@ ul#context-menu li {
   border-style: dotted;
   background :  #AAFFFF;
   font-family: Tahoma, sans-serif;
-
 }
