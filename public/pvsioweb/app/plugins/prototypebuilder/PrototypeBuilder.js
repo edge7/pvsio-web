@@ -26,6 +26,17 @@ define(function (require, exports, module) {
 		var editorContainer = pvsioWebClient.createCollapsiblePanel("Source code Editor");
 		var aceContainer = editorContainer.append("div").html(sourceCodeTemplate);
 		var editor = ace.edit("editor");
+        ace.require("ace/ext/language_tools");
+        editor.setOptions({
+            enableBasicAutocompletion: true
+        });
+	    editor.getSession().setMode('ace/mode/pvsLanguage');
+    
+        editor.commands.on("afterExec", function(e){
+            if (e.command.name == "insertstring"&&/^[\w.]$/.test(e.args)) {
+                editor.execCommand("startAutocomplete")
+             }
+        })
 		projectManager.editor(editor);
 		projectManager.preparePageForImageUpload();
 		projectManager.prepareListBoxForFileDrag();

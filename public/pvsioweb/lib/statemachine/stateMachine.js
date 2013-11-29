@@ -30,8 +30,10 @@ var newNodeID = function () { return nodeIDGenerator++; }
 var minBoxWidth  = 60; 
 var minBoxHeight = 60;
 var curvyLines = false;
-var add_node = function (positionX, positionY, label) {
+var add_node = function (positionX, positionY, label, heigh, widt) {
 	var _id = "X" + newNodeID();
+    console.log("ADD_NODE NODE: " + label);
+    console.log(" HEIGTH " + heigh + " WIDTH " + widt );
 	var node = { 
 			fixed: true,
 			reflexive: false,
@@ -41,11 +43,13 @@ var add_node = function (positionX, positionY, label) {
 			y    : positionY,
 			px   : positionX,
 			py   : positionY,
-			height: minBoxHeight,
-			width : minBoxWidth,
+			height: (heigh === undefined) ? minBoxHeight : heigh,
+			width : (widt === undefined) ? minBoxWidth : widt,
 			weight: 0,
             warning : new Object()
 	};
+    console.log("NEW HEIGTH ", node.height);
+    console.log("NEW WIDTH ", node.width);
     node.warning.notPresentInSpec = false;
     node.warning.labelAlreadyUsed = false;
 	// add node
@@ -59,6 +63,7 @@ var update_node_size = function (id, width, height) {
 	var theNode = graph.nodes.get(id);
 	theNode.height = height;
 	theNode.width = width;
+    console.log("NEW SIZE " , width, height );
 	graph.nodes.set(id, theNode);
 }
 
@@ -99,7 +104,6 @@ var links;
 
 function restoreGraph(graphToRestore, editor, ws, currentProject, pm)
 {
-    console.log("restoreGraph", graphToRestore);
     init(editor, ws, currentProject, pm);
     var nodesToRestore = graphToRestore.nodes;
     var edgesToRestore = graphToRestore.edges;
@@ -107,11 +111,10 @@ function restoreGraph(graphToRestore, editor, ws, currentProject, pm)
     var comeOn = new Array();
     for( var id in nodesToRestore)
     {
-         console.log(nodesToRestore[id]);
          var currentNode = nodesToRestore[id];
-         console.log("ReSt ",currentNode.x, currentNode.y);
+         console.log("ReSt ",currentNode.height, currentNode.width);
          workAround.push(currentNode);
-         comeOn.push(add_node(currentNode.x, currentNode.y, currentNode.label));
+         comeOn.push(add_node(currentNode.x, currentNode.y, currentNode.name, currentNode.height, currentNode.width));
     }
     for( var id in edgesToRestore)
     {
@@ -126,15 +129,18 @@ function restoreGraph(graphToRestore, editor, ws, currentProject, pm)
                  currentEdge.target = comeOn[i];
          }
          add_edge(currentEdge.source, currentEdge.target, currentEdge.label);
-    }    
+    } 
+
     emulink();
 }
+
 
 function getGraphDefinition()
 {
     return JSON.stringify(graph);    
 }
     
+
 function showInformationInTextArea(element) {
 	var textArea = document.getElementById("infoBox");
 	var type = "TYPE:   " ;
@@ -163,9 +169,7 @@ function changeTextArea(node, path) {
 	var name = content.split(';')[0];
 	var realName = name.substring(name.indexOf(':') + 2);
     var newOperation = realName.substring(realName.indexOf('{') + 1, realName.indexOf('}') );
-    
-    console.log(newOperation);
-		
+    		
 	if( selected_nodes.length ) {    
 	    /// Change name in the canvas 
 	    var object = selected_nodes[ selected_nodes.length -1];
@@ -176,7 +180,6 @@ function changeTextArea(node, path) {
 			if(d.id == oldId) { return realName; }
 			return d.name;
 		});
-        console.log("Change Name In node");
 		var newNode = graph.nodes.get(oldId);
 		newNode.name = realName;
 		graph.nodes.set(oldId, newNode);
@@ -188,7 +191,6 @@ function changeTextArea(node, path) {
 	}
     if( selected_edges.length )
     {
-        console.log("change name in edge");
         var object = selected_edges[ selected_edges.length - 1];
         var sourceName = object.source.name;
         var targetName = object.target.name;
@@ -798,20 +800,7 @@ var emulink = function() {
 		restart();
 	  });
     
-    d3.select("#saveGraph")
-      .on("click", function () {
-         console.log("SAVING PICTURE");
-          var a = JSON.stringify(graph.nodes);
-          console.log("STRING" + a);
-          graph.edges = d3.map();
-          graph.nodes = d3.map();
-          restart();
-          console.log("QUI");
-          a = eval("("+a+")");
-          console.log(a);
-          graph.nodes.set(1, a);
-          restart();
-      });
+
     
     d3.select("#addFieldState")
       .on("click", function () {
@@ -846,7 +835,7 @@ module.exports = {
     getNodesInDiagram : getNodesInDiagram,
     getEdgesInDiagram : getEdgesInDiagram,
     getGraphDefinition : getGraphDefinition,
-    restoreGraph : restoreGraph 
+    restoreGraph : restoreGraph,
 };
 
 

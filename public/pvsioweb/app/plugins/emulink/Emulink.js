@@ -29,7 +29,9 @@ define(function (require, exports, module) {
 		var projectManager = pb.getProjectManager(),
 			editor = pb.getEditor();
         ws = pvsioWebClient.getWebSocket();
-        var currentProject = projectManager.project();		
+        var currentProject = projectManager.project();	
+        
+    
 		//create the user interface elements
 		createHtmlElements(pvsioWebClient);
 		/** NEW: StateChart **************************************************************************/   

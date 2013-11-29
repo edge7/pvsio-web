@@ -544,7 +544,7 @@ define(function (require, exports, module) {
                         project = res;
                         pvsFilesListView.updateView();
                         pm.fire({type: "ProjectSaved", project: project});
-                        pm.updateSourceCodeToolbarButtons(pvsFilesListView.selectedItem());
+                        updateSourceCodeToolbarButtons(pvsFilesListView.selectedItem());
                     }
                 });
             }

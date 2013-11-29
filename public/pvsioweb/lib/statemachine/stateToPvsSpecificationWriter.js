@@ -527,6 +527,8 @@ function WriterOnContent(nameTheory, editor)
         
         writer.restoreCursorPosition();
         
+        hideTags();
+        
     }
     this.checkConsistenceStateNames = function(nodesInDiagram, stateNamesInSpecification)
     {
@@ -552,7 +554,6 @@ function WriterOnContent(nameTheory, editor)
             var isContained = itemIsContained(nodesInStateNames, nodesInDiagram[i].name );  
             if( ! isContained ) 
             {   
-                console.log("Error: ", nodesInDiagram[i].name, "Is not Contatined in ", nodesInStateNames);
                 nodesInDiagram[i].warning.notPresentInSpec = true;
                 debug.value = debug.value + "Error: " + nodesInDiagram[i].name + " is not contained in the specification\n";
             }
@@ -576,7 +577,6 @@ function WriterOnContent(nameTheory, editor)
                 var currentName = currentEdge.name.indexOf('{') == -1 ? currentEdge.name 
                                                                       : currentEdge.name.substring(0, currentEdge.name.indexOf('{'));
                 var operation = currentEdge.name.substring(currentEdge.name.indexOf('{') +1, currentEdge.name.indexOf('}'));
-                console.log("OPERATION", operation);
                 var currentSource = currentEdge.source.name;
                 var currentTarget = currentEdge.target.name;
                 
@@ -625,6 +625,41 @@ function WriterOnContent(nameTheory, editor)
            }
         
         
+    }
+    this.checkConsistenceOperation = function(operation)
+    {
+        var indexEqual;
+        
+        if( (indexEqual = operation.indexOf('=')) == -1 )
+            return;
+        
+        var missField = true;
+        var fieldStateInOperation = operation.substring(0, indexEqual).replace(/(\r\n|\n|\r)/gm,"").replace(/\s+/g,"");
+        var startTag = "%{\"_block\" : \"BlockStart\", \"_id\" : \"State\"}";
+        var endTag = "%{\"_block\" : \"BlockEnd\", \"_id\" : \"State\"}";
+        
+        var currentFieldsState = this.getContentBetweenTags(startTag, endTag).replace(/(\r\n|\n|\r)/gm,"").replace(/\s+/g,"");
+        currentFieldsState = currentFieldsState.substring(currentFieldsState.indexOf('#') + 1, currentFieldsState.lastIndexOf('#') );
+        currentFieldsState = currentFieldsState.split(',');
+        var length = currentFieldsState.length;
+        
+        for( var i = 0; i < length; i++ )
+        {
+             currentFieldsState[i] = currentFieldsState[i].substring(0, currentFieldsState[i].indexOf(':'));
+             console.log(currentFieldsState[i],fieldStateInOperation);
+             if( currentFieldsState[i] == fieldStateInOperation )
+             {
+                 missField = false;
+                 break;
+             }            
+        }
+        if( ! missField)
+            return;
+        
+        var debug = document.getElementById("warningDebug");
+        debug.value = "\t   DeBuG \n";
+        debug.value = debug.value + "Warning: " + fieldStateInOperation + " is not in PVS State ";
+
     }
     this.changeEditor = function() 
     {   
@@ -686,6 +721,8 @@ function WriterOnContent(nameTheory, editor)
     }
     this.addOperationInCondition = function(nameTrans, sourceName, targetName, operation)
     {
+        this.checkConsistenceOperation(operation);
+        
         operation = "   new_st = new_st WITH [ " + operation + " ]";
         var arrayTag = this.buildTagCond(nameTrans, sourceName, targetName);
         var content = this.getContentBetweenTags(arrayTag[0], arrayTag[1]);
@@ -694,6 +731,7 @@ function WriterOnContent(nameTheory, editor)
         
         this.editor.find(arrayTag[0] + content + arrayTag[1]);
         this.editor.replace(arrayTag[0] + newContent + arrayTag[1]);
+        
     }
     this.addFieldInState = function(nameField, typeName)
     {
